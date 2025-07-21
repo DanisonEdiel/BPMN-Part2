@@ -1,0 +1,66 @@
+version: '3'
+
+services:
+  zeebe:
+    image: camunda/zeebe:8.5.0
+    environment:
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_CLASSNAME=io.camunda.zeebe.exporter.ElasticsearchExporter
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_URL=http://elasticsearch:9200
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_BULK_SIZE=1
+      - ZEEBE_LOG_LEVEL=debug
+    ports:
+      - "26500:26500"
+      - "9600:9600"
+    networks:
+      - camunda-platform
+    depends_on:
+      - elasticsearch
+
+  operate:
+    image: camunda/operate:8.5.0
+    environment:
+      - CAMUNDA_OPERATE_ZEEBE_GATEWAYADDRESS=zeebe:26500
+      - CAMUNDA_OPERATE_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+    ports:
+      - "8081:8080"
+    networks:
+      - camunda-platform
+    depends_on:
+      - elasticsearch
+      - zeebe
+
+  tasklist:
+    image: camunda/tasklist:8.5.0
+    environment:
+      - CAMUNDA_TASKLIST_ZEEBE_GATEWAYADDRESS=zeebe:26500
+      - CAMUNDA_TASKLIST_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_TASKLIST_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+    ports:
+      - "8082:8080"
+    networks:
+      - camunda-platform
+    depends_on:
+      - elasticsearch
+      - zeebe
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - cluster.name=camunda-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    networks:
+      - camunda-platform
+
+networks:
+  camunda-platform:
+    driver: bridge

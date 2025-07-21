@@ -1,0 +1,43 @@
+{
+  "components": [
+    {
+      "text": "# Revisión de Solicitud de Reembolso",
+      "type": "text",
+      "id": "Field_title"
+    },
+    {
+      "label": "Información de la solicitud",
+      "type": "text",
+      "id": "Field_infoSolicitud",
+      "key": "infoSolicitud",
+      "readonly": true
+    },
+    {
+      "label": "¿Aprobar solicitud?",
+      "type": "checkbox",
+      "id": "Field_aprobar",
+      "key": "supervisorAprueba"
+    },
+    {
+      "label": "Comentarios",
+      "type": "textfield",
+      "id": "Field_comentarios",
+      "key": "comentarios"
+    },
+    {
+      "label": "Enviar",
+      "type": "button",
+      "id": "Field_enviar",
+      "key": "enviar"
+    }
+  ],
+  "schemaVersion": 5,
+  "exporter": {
+    "name": "Camunda Web Modeler",
+    "version": "8.7.0"
+  },
+  "type": "default",
+  "id": "revisionSupervisor",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.2.0"
+}

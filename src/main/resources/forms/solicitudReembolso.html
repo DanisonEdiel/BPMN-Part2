@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitud de Reembolso</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    .form-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .required:after {
+      content: " *";
+      color: red;
+    }
+    button {
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #3367d6;
+    }
+    .alert {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      display: none;
+    }
+    .alert-success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .alert-error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    .result-container {
+      margin-top: 20px;
+      display: none;
+    }
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .result-table th, .result-table td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    .result-table th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <h2>Solicitud de Reembolso de Gastos</h2>
+    
+    <form id="solicitudReembolso" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="facturaFile" class="required">Factura (JPG/PNG/PDF)</label>
+        <input type="file" id="facturaFile" name="file" accept=".jpg,.jpeg,.png,.pdf,.tiff,.bmp" required>
+        <small>Formatos soportados: JPG, PNG, PDF, TIFF, BMP</small>
+      </div>
+      
+      <button type="submit" id="submitBtn">Procesar Factura con OCR</button>
+    </form>
+    
+    <div id="successMessage" class="alert alert-success"></div>
+    <div id="errorMessage" class="alert alert-error"></div>
+    
+    <div id="resultContainer" class="result-container">
+      <h3>Datos extraídos de la factura:</h3>
+      <table class="result-table">
+        <tr>
+          <th>Campo</th>
+          <th>Valor</th>
+        </tr>
+        <tbody id="resultTableBody"></tbody>
+      </table>
+      
+      <button id="startProcessBtn" style="margin-top: 20px; display: none;">Iniciar Proceso BPM con estos datos</button>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('solicitudReembolso');
+      const successMessage = document.getElementById('successMessage');
+      const errorMessage = document.getElementById('errorMessage');
+      const resultContainer = document.getElementById('resultContainer');
+      const resultTableBody = document.getElementById('resultTableBody');
+      const startProcessBtn = document.getElementById('startProcessBtn');
+      
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('facturaFile');
+        if (!fileInput.files[0]) {
+          showError('Por favor seleccione un archivo');
+          return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        
+        // Mostrar mensaje de carga
+        showMessage('Procesando factura con OCR...', 'info');
+        
+        // Enviar archivo al servicio OCR
+        fetch('http://localhost:5000/ocr', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Error en el servicio OCR');
+          }
+          return response.json();
+        })
+        .then(data => {
+          // Mostrar resultados
+          showSuccess('Factura procesada correctamente');
+          displayResults(data);
+        })
+        .catch(error => {
+          showError('Error al procesar la factura: ' + error.message);
+        });
+      });
+      
+      startProcessBtn.addEventListener('click', function() {
+        // Obtener datos de la tabla de resultados
+        const rows = resultTableBody.querySelectorAll('tr');
+        const processData = {};
+        
+        rows.forEach(row => {
+          const cells = row.querySelectorAll('td');
+          const key = cells[0].textContent.toLowerCase().replace(' ', '_');
+          const value = cells[1].textContent;
+          processData[key] = value;
+        });
+        
+        // Enviar datos al endpoint para iniciar el proceso BPM
+        fetch('/api/iniciar-reembolso-json', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(processData)
+        })
+        .then(response => response.json())
+        .then(data => {
+          showSuccess('Proceso BPM iniciado correctamente. ID: ' + data.processInstanceId);
+          // Redirigir a Camunda Tasklist
+          setTimeout(() => {
+            window.location.href = 'http://localhost:8082';
+          }, 3000);
+        })
+        .catch(error => {
+          showError('Error al iniciar el proceso BPM: ' + error.message);
+        });
+      });
+      
+      function showMessage(message, type) {
+        successMessage.style.display = 'none';
+        errorMessage.style.display = 'none';
+        
+        if (type === 'success') {
+          successMessage.textContent = message;
+          successMessage.style.display = 'block';
+        } else if (type === 'error') {
+          errorMessage.textContent = message;
+          errorMessage.style.display = 'block';
+        }
+      }
+      
+      function showSuccess(message) {
+        showMessage(message, 'success');
+      }
+      
+      function showError(message) {
+        showMessage(message, 'error');
+      }
+      
+      function displayResults(data) {
+        resultTableBody.innerHTML = '';
+        
+        // Crear filas para cada campo extraído
+        Object.entries(data).forEach(([key, value]) => {
+          if (key !== 'success') {
+            const row = document.createElement('tr');
+            
+            const keyCell = document.createElement('td');
+            keyCell.textContent = key.charAt(0).toUpperCase() + key.slice(1).replace('_', ' ');
+            
+            const valueCell = document.createElement('td');
+            valueCell.textContent = value;
+            
+            row.appendChild(keyCell);
+            row.appendChild(valueCell);
+            resultTableBody.appendChild(row);
+          }
+        });
+        
+        resultContainer.style.display = 'block';
+        startProcessBtn.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "components": [
+    {
+      "content": "Selecciona tu factura",
+      "type": "html",
+      "layout": {
+        "row": "Row_09v6hlo",
+        "columns": null
+      },
+      "id": "Field_08m42ct"
+    },
+    {
+      "label": "File picker",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_0mvd374",
+        "columns": null
+      },
+      "id": "Field_0w1t2za",
+      "key": "filepicker_73gwea"
+    }
+  ],
+  "type": "default",
+  "id": "solicitudReembolso",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.37.0"
+  },
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.23.0",
+  "schemaVersion": 18
+}
