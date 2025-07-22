@@ -39,5 +39,5 @@
   "type": "default",
   "id": "revisionSupervisor",
   "executionPlatform": "Camunda Cloud",
-  "executionPlatformVersion": "8.2.0"
+  "executionPlatformVersion": "8.7.0"
 }

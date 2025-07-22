@@ -2,7 +2,7 @@ version: '3'
 
 services:
   zeebe:
-    image: camunda/zeebe:8.5.0
+    image: camunda/zeebe:8.7.0
     environment:
       - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_CLASSNAME=io.camunda.zeebe.exporter.ElasticsearchExporter
       - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_URL=http://elasticsearch:9200
@@ -17,11 +17,17 @@ services:
       - elasticsearch
 
   operate:
-    image: camunda/operate:8.5.0
+    image: camunda/operate:8.7.0
     environment:
       - CAMUNDA_OPERATE_ZEEBE_GATEWAYADDRESS=zeebe:26500
       - CAMUNDA_OPERATE_ELASTICSEARCH_URL=http://elasticsearch:9200
       - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+      # Configuración para conectar con Identity
+      - CAMUNDA_OPERATE_IDENTITY_BASEURL=http://keycloak:8080
+      - CAMUNDA_OPERATE_IDENTITY_ISSUER=http://keycloak:8080/realms/camunda-platform
+      - CAMUNDA_OPERATE_IDENTITY_CLIENTID=operate
+      - CAMUNDA_OPERATE_IDENTITY_CLIENTSECRET=XALaRPl5qwTEItdwCMiPS62nVpKs7dL7
+      - CAMUNDA_OPERATE_IDENTITY_AUDIENCE=operate-api
     ports:
       - "8081:8080"
     networks:
@@ -29,13 +35,20 @@ services:
     depends_on:
       - elasticsearch
       - zeebe
+      - keycloak
 
   tasklist:
-    image: camunda/tasklist:8.5.0
+    image: camunda/tasklist:8.7.0
     environment:
       - CAMUNDA_TASKLIST_ZEEBE_GATEWAYADDRESS=zeebe:26500
       - CAMUNDA_TASKLIST_ELASTICSEARCH_URL=http://elasticsearch:9200
       - CAMUNDA_TASKLIST_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+      # Configuración para conectar con Identity
+      - CAMUNDA_TASKLIST_IDENTITY_BASEURL=http://keycloak:8080
+      - CAMUNDA_TASKLIST_IDENTITY_ISSUER=http://keycloak:8080/realms/camunda-platform
+      - CAMUNDA_TASKLIST_IDENTITY_CLIENTID=tasklist
+      - CAMUNDA_TASKLIST_IDENTITY_CLIENTSECRET=XALaRPl5qwTEItdwCMiPS62nVpKs7dL7
+      - CAMUNDA_TASKLIST_IDENTITY_AUDIENCE=tasklist-api
     ports:
       - "8082:8080"
     networks:
@@ -43,6 +56,7 @@ services:
     depends_on:
       - elasticsearch
       - zeebe
+      - keycloak
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
@@ -61,6 +75,44 @@ services:
     networks:
       - camunda-platform
 
+  # Cambiamos a Keycloak directamente en lugar de Identity
+  keycloak:
+    image: quay.io/keycloak/keycloak:21.1.1
+    command: start-dev
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-postgres:5432/bitnami_keycloak
+      - KC_DB_USERNAME=bn_keycloak
+      - KC_DB_PASSWORD=bn_keycloak
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
+      - KC_HEALTH_ENABLED=true
+    ports:
+      - "8084:8080"
+    networks:
+      - camunda-platform
+    depends_on:
+      - keycloak-postgres
+
+  # Base de datos para Keycloak
+  keycloak-postgres:
+    image: bitnami/postgresql:14
+    environment:
+      - POSTGRESQL_USERNAME=bn_keycloak
+      - POSTGRESQL_PASSWORD=bn_keycloak
+      - POSTGRESQL_DATABASE=bitnami_keycloak
+    volumes:
+      - keycloak-postgres-data:/bitnami/postgresql
+    networks:
+      - camunda-platform
+
 networks:
   camunda-platform:
     driver: bridge
+
+volumes:
+  keycloak-postgres-data:
+    driver: local

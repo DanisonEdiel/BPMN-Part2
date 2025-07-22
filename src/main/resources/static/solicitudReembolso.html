@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud de Reembolso</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .file-upload input {
+            display: block;
+            margin: 10px auto;
+        }
+        .file-upload label {
+            cursor: pointer;
+            color: #4CAF50;
+        }
+        #preview {
+            max-width: 100%;
+            max-height: 300px;
+            margin-top: 10px;
+            display: none;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Solicitud de Reembolso</h1>
+        
+        <div id="statusMessage" class="status"></div>
+        
+        <form id="reembolsoForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="empleado">Nombre del Empleado:</label>
+                <input type="text" id="empleado" name="empleado" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="departamento">Departamento:</label>
+                <select id="departamento" name="departamento" required>
+                    <option value="">Seleccione un departamento</option>
+                    <option value="IT">IT</option>
+                    <option value="RRHH">RRHH</option>
+                    <option value="Ventas">Ventas</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Finanzas">Finanzas</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="fecha">Fecha de Gasto:</label>
+                <input type="date" id="fecha" name="fecha" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="monto">Monto a Reembolsar:</label>
+                <input type="number" id="monto" name="monto" step="0.01" min="0" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="concepto">Concepto del Gasto:</label>
+                <input type="text" id="concepto" name="concepto" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="descripcion">Descripción Detallada:</label>
+                <textarea id="descripcion" name="descripcion" rows="4" required></textarea>
+            </div>
+            
+            <div class="form-group file-upload">
+                <label for="factura">Factura o Comprobante:</label>
+                <input type="file" id="factura" name="factura" accept="image/*" onchange="previewFile()" required>
+                <p>Formatos aceptados: JPG, PNG, PDF</p>
+                <img id="preview" src="#" alt="Vista previa de la factura">
+            </div>
+            
+            <button type="submit" id="submitBtn">Enviar Solicitud</button>
+        </form>
+        
+        <div style="margin-top: 30px; text-align: center;">
+            <button id="iniciarProcesoBtn" style="background-color: #2196F3;">Iniciar Nuevo Proceso</button>
+        </div>
+    </div>
+
+    <script>
+        function previewFile() {
+            const preview = document.getElementById('preview');
+            const file = document.getElementById('factura').files[0];
+            const reader = new FileReader();
+            
+            reader.onloadend = function() {
+                preview.src = reader.result;
+                preview.style.display = 'block';
+            }
+            
+            if (file) {
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = "";
+                preview.style.display = 'none';
+            }
+        }
+        
+        function showStatus(message, isError = false) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = isError ? 'status error' : 'status success';
+            statusElement.style.display = 'block';
+            
+            // Ocultar después de 5 segundos
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 5000);
+        }
+        
+        document.getElementById('reembolsoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch('/api/enviar-formulario', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showStatus('Error: ' + data.error, true);
+                } else {
+                    showStatus('Formulario enviado correctamente. ID del proceso: ' + data.processInstanceId);
+                    document.getElementById('reembolsoForm').reset();
+                    document.getElementById('preview').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                showStatus('Error al enviar el formulario: ' + error.message, true);
+            });
+        });
+        
+        document.getElementById('iniciarProcesoBtn').addEventListener('click', function() {
+            fetch('/api/iniciar-proceso', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showStatus('Error: ' + data.error, true);
+                } else {
+                    showStatus('Proceso iniciado correctamente. ID del proceso: ' + data.processInstanceId);
+                }
+            })
+            .catch(error => {
+                showStatus('Error al iniciar el proceso: ' + error.message, true);
+            });
+        });
+    </script>
+</body>
+</html>
